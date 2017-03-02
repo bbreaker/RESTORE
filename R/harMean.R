@@ -1,12 +1,11 @@
-harmMean <- function(x, na.rm = FALSE) {
+# function to compute the harmonic mean for 
+# a vector of streamflow values
+
+harMean <- function(x, na.rm = FALSE) {
   
   if(na.rm)
     
     x <- x[!is.na(x)]
-  
-  if(length(x) == 0L)
-    
-    stop("there is no data")
   
   if(any(is.na(x)))
     
