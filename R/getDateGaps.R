@@ -1,11 +1,4 @@
 ### After you run the function below on a vector of site IDs, use this to get sites that have > 3600 dvs
-#
-# newRefDF <- mutate(newRefDF, recLength = as.numeric(difftime(endDate, startDate, units = "days")))
-#
-# newRefDFFinal <- newRefDF %>%
-#   group_by(site_no, comment) %>%
-#   summarize(recLength = sum(recLength, na.rm = TRUE)) %>%
-#   filter(comment == "1" & recLength > 3600)
 
 getDateGaps <- function(site) {
   
