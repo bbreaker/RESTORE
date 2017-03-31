@@ -1,4 +1,5 @@
 ### After you run the function below on a vector of site IDs, use this to get sites that have > 3600 dvs
+### 
 
 getDateGaps <- function(site) {
   
