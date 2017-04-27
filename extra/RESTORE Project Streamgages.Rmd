@@ -1,0 +1,70 @@
+---
+title: "USGS Streamflow-gaging Stations for RESTORE Project"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## USGS Streamflow-gaging Stations
+
+The following code is used to produce an interactive map of the USGS streamflow-gaging stations used for the RESTORE Project which is being conducted by the USGS Lower Mississippi-Gulf Water Science Center.
+
+```{r, echo=TRUE, message=FALSE, fig.height=8, fig.width=9.45}
+pacman::p_load("leaflet", "rgdal")
+
+m <- leaflet::leaflet()
+
+grp <- c("USGS Topo", "USGS Imagery Only", "USGS Imagery Topo",
+         "USGS Shaded Relief", "Hydrography")
+
+att <- paste0("<a href='https://www.usgs.gov/'>",
+              "U.S. Geological Survey</a> | ",
+              "<a href='https://www.usgs.gov/laws/policies_notices.html'>",
+              "Policies</a>")
+
+GetURL <- function(service, host = "basemap.nationalmap.gov") {
+  sprintf("https://%s/arcgis/services/%s/MapServer/WmsServer", host, service)
+}
+
+m <- leaflet::addWMSTiles(m, GetURL("USGSTopo"),
+                            group = grp[1], attribution = att, layers = "0")
+m <- leaflet::addWMSTiles(m, GetURL("USGSImageryOnly"),
+                            group = grp[2], attribution = att, layers = "0")
+m <- leaflet::addWMSTiles(m, GetURL("USGSImageryTopo"),
+                            group = grp[3], attribution = att, layers = "0")
+m <- leaflet::addWMSTiles(m, GetURL("USGSShadedReliefOnly"),
+                            group = grp[4], attribution = att, layers = "0")
+
+opt <- leaflet::WMSTileOptions(format = "image/png", transparent = TRUE)
+m <- leaflet::addWMSTiles(m, GetURL("USGSHydroCached"),
+                            group = grp[5], options = opt, layers = "0")
+m <- leaflet::hideGroup(m, grp[5])
+
+sites <- readr::read_csv("sitesList.csv")
+
+sp::coordinates(sites) <- c("coords.x1", "coords.x2")
+
+sp::proj4string(sites) <- sp::CRS("+proj=longlat +datum=NAD83")
+
+sites <- sp::spTransform(sites, sp::CRS("+init=epsg:4326"))
+
+num <- sites$siteno  # site number
+nam <- sites$station_nm # local site name
+url <- sprintf("https://waterdata.usgs.gov/nwis/inventory/?site_no=%s", num)
+pop <- sprintf("<b>Name:</b> %s<br/><b>Site No:</b> <a href='%s'>%s</a>",
+               nam, url, num)
+
+opt <- leaflet::markerClusterOptions(showCoverageOnHover = FALSE)
+
+m <- leaflet::addCircleMarkers(m, radius = 10, weight = 3, popup = pop,
+                                 clusterOptions = opt, data = sites)
+
+opt <- leaflet::layersControlOptions(collapsed = TRUE)
+
+m <- leaflet::addLayersControl(m, baseGroups = grp[1:4],
+                                 overlayGroups = grp[5], options = opt)
+
+m
+```
