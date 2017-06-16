@@ -12,13 +12,17 @@ runEflowStats <- function(site, startDt, endDt) {
     
     startYrNew <- startYr
     
-  } else if(startMn > 10) {
+  } 
+  
+  if(startMn > 10) {
     
-    startYrNew <- startYrNew + 1L
+    startYrNew <- startYr + 1L
     
-  } else if(startMn == 10 & startDy != 1L) {
+  } 
+  
+  if(startMn == 10 & startDy != 1L) {
     
-    startYrNew <- startYrNew + 1L
+    startYrNew <- startYr + 1L
     
   }
   
@@ -38,11 +42,15 @@ runEflowStats <- function(site, startDt, endDt) {
     
     endYrNew <- endYr 
     
-  } else if (endMn < 9L) {
+  } 
+  
+  if(endMn < 9L) {
     
     endYrNew <- endYr - 1L
     
-  } else if (endMn == 9L & endDy != 30L) {
+  } 
+  
+  if(endMn == 9L & endDy != 30L) {
     
     endYrNew <- endYr - 1L
     
