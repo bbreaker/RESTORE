@@ -1,12 +1,12 @@
 ### After you run the function below on a vector of site IDs, use this to get sites that have > 3600 dvs
 ### 
 
-getDateGaps <- function(site) {
+getDateGaps <- function(site, startDt, endDt) {
   
   # Get the DVs or return comment if failure occurs
   newDvs <- tryCatch({
     
-    dataRetrieval::readNWISdv(site, parameterCd = "00060", statCd = "00003")
+    readNWISdv(site, parameterCd = "00060", statCd = "00003", startDate = startDt, endDate = endDt)
     
   },
   
@@ -18,7 +18,7 @@ getDateGaps <- function(site) {
   
   if(nrow(newDvs) == 1) {
     
-    newDF <- newDvs
+    newDF <- data.frame(site_no = site, comment = "insufficient data", stringsAsFactors = FALSE)
     
     return(newDF)
     
@@ -30,7 +30,7 @@ getDateGaps <- function(site) {
     colnames(newDvs)[4] <- "Flow"
     
     # get the site file
-    siteInfo <- dataRetrieval::readNWISsite(site)
+    siteInfo <- readNWISsite(site)
     
     if(is.na(siteInfo$drain_area_va)) {
       
@@ -48,7 +48,7 @@ getDateGaps <- function(site) {
     newDvs <- merge(x = newDate, y = newDvs, by = "Date", all.x = TRUE)
     
     # create a new column that has 0's for NA values and 1's for any other value
-    refDvs <- dplyr::mutate(newDvs, chunk = dplyr::if_else(is.na(Flow), 0, 1))
+    refDvs <- mutate(newDvs, chunk = if_else(is.na(Flow), 0, 1))
     
     # create vectors to reference where the data is
     reflengths <- rle(refDvs$chunk)$lengths; refVals <- rle(refDvs$chunk)$values
@@ -80,7 +80,7 @@ getDateGaps <- function(site) {
                               endDate = newDvs[refDF[i,3],1],comment = as.character(refDF[i,2]), 
                               stringsAsFactors = FALSE)
         
-        newDF <- dplyr::bind_rows(newDF, newerDF); rm(newerDF)
+        newDF <- bind_rows(newDF, newerDF); rm(newerDF)
         
       }
       
