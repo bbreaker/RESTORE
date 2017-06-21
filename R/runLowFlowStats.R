@@ -33,7 +33,7 @@ runLowFlowStats <- function(site, startDate, endDate, yearType) {
                         oneQ10 = as.numeric(oneQten(dvs$Date, dvs$Flow, yearType)), 
                         thirtyQ5 = as.numeric(thirtyQfive(dvs$Date, dvs$Flow, yearType)), 
                         thirtyQ2 = as.numeric(thirtyQtwo(dvs$Date, dvs$Flow, yearType)), 
-                        harMean = as.numeric(harmMean(dvs$Flow, na.rm = TRUE)),
+                        harmMean = as.numeric(harMean(dvs$Flow, na.rm = TRUE)),
                         comment = NA)
     
     return(newDF)
