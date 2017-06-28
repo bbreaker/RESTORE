@@ -1,8 +1,0 @@
-name: "RESTORE"
-navbar:
-  title: "USGS RESTORE Project"
-  left:
-    - text: 
-      href: index.html
-    - text: "Streamflow Characteristics"
-      href: restoreProj.html
