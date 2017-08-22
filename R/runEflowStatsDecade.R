@@ -1,9 +1,78 @@
-runEflowStatsDecde <- function(site, startDate, endDate) {
+runEflowStatsDecade <- function(site, startDt, endDt) {
   
-  # Get the DVs or return comment if failure occurs
+  startDtNew <- as.POSIXlt(startDt)
+  
+  startYr <- as.integer(format(startDtNew, "%Y"))
+  
+  startMn <- as.integer(format(startDtNew, "%m"))
+  
+  startDy <- as.integer(format(startDtNew, "%d"))
+  
+  if(startMn == 10 & startDy == 1L) {
+    
+    startYrNew <- startYr
+    
+  }
+  
+  else if(startMn < 10 ) {
+    
+    startYrNew <- startYr
+    
+  }
+  
+  else if(startMn > 10) {
+    
+    startYrNew <- startYr + 1L
+    
+  }
+  
+  else if(startMn == 10 & startDy != 1L) {
+    
+    startYrNew <- startYr + 1L
+    
+  }
+  
+  startDtNew <- paste0(startYrNew, "-10-01")
+  
+  endDtNew <- as.POSIXlt(endDt)
+  
+  endYr <- as.integer(format(endDtNew, "%Y"))
+  
+  endMn <- as.integer(format(endDtNew, "%m"))
+  
+  endDt <- as.integer(format(endDtNew, "%d"))
+  
+  endDy <- as.integer(format(endDtNew, "%d"))
+  
+  if(endMn == 9L & endDy == 30L) {
+    
+    endYrNew <- endYr 
+    
+  } 
+  
+  else if(endMn > 9L) {
+    
+    endYrNew <- endYr
+    
+  }
+  
+  else if(endMn < 9L) {
+    
+    endYrNew <- endYr - 1L
+    
+  } 
+  
+  else if(endMn == 9L & endDy != 30L) {
+    
+    endYrNew <- endYr - 1L
+    
+  }
+  
+  endDtNew <- paste0(endYrNew, "-09-30")
+  
   newDvs <- tryCatch({
     
-    readNWISdv(site, parameterCd = "00060", statCd = "00003")
+    readNWISdv(site, parameterCd = "00060", statCd = "00003", startDate = startDtNew, endDate = endDtNew)
     
   },
   
@@ -19,7 +88,7 @@ runEflowStatsDecde <- function(site, startDate, endDate) {
   # return info about site and failure
   if (nrow(newDvs) == 1) {
     
-    EflowDat <- newDvs
+    EflowDat <- data.frame(site_no = site, comment = "no flow data")
     
     return(EflowDat)
     
@@ -28,112 +97,344 @@ runEflowStatsDecde <- function(site, startDate, endDate) {
   # work with the Dvs
   else if(nrow(newDvs) != 1) {
     
-    # Rename flows in the data frame
-    colnames(newDvs)[4] <- "Flow"
-    
     # get the site file
     siteInfo <- readNWISsite(site)
     
-    # sites that have excessive amounts of 0 flows crash EflowStats
     if(is.na(siteInfo$drain_area_va)) {
       
-      EflowDat <- data.frame(site_no = as.character(site), 
+      EflowDat <- data.frame(site_no = as.character(site),
                              comment = "has no DA in site file", stringsAsFactors = FALSE)
       
       return(EflowDat)
       
     }
     
-    # sites that don't have excessive 0 flows and do have published drainage areas
     else if(!is.na(siteInfo$drain_area_va)) {
       
-      # add a decade column to the data frame
-      newDvs <- newDvs %>% 
-        mutate(yr = as.numeric(format(Date, "%Y")), mn = as.numeric(format(Date, "%m"))) %>% 
-        mutate(waterYr = yr + if_else(mn < 10, 0, 1)) %>% 
-        mutate(decade = (waterYr %/% 10) * 10)
+      names(newDvs)[4] <- "Flow"
       
-      # create a vector of unique decades in the data frame
-      decs <- unique(newDvs$decade)
+      pkFile <- readNWISpeak(site, convertType = FALSE)
       
-      if(length(decs) == 1) {
+      pkFile$peak_dt <- dplyr::if_else(stringr::str_sub(pkFile$peak_dt, start = 9, end = 10) == "00",
+                                       paste0(stringr::str_sub(pkFile$peak_dt, 1, 8), "01"), pkFile$peak_dt)
+      
+      pkFile$peak_dt <- dplyr::if_else(stringr::str_sub(pkFile$peak_dt, start = 6, end = 7) == "00",
+                                       paste0(stringr::str_sub(pkFile$peak_dt, 1, 5), "04-01"), pkFile$peak_dt)
+      
+      pkFile$peak_dt <- as.Date(pkFile$peak_dt, format = "%Y-%m-%d")
+      
+      pkFile$peak_va <- as.numeric(pkFile$peak_va)
+      
+      pkFile <- pkFile[!is.na(pkFile$peak_va),]
+      
+      pkFile <- dplyr::filter(pkFile, !peak_va == 0)
+      
+      if(nrow(pkFile) < 2) {
         
-        # subset the DVs by the first decade
-        subDvs <- filter(newDvs, decade == decs[1])
-        
-        # format data for EflowStats
-        flowForstats <- data.frame(datetime = subDvs$Date, discharge = subDvs$Flow)
-        
-        EflowDat <- tryCatch({
-          
-          ObservedStatsOther(daily_data = flowForstats, drain_area = siteInfo$drain_area_va, 
-                             site_id = newDvs[1,2], stats = stats)
-          
-        },
-        
-        error = function(cond){
-          
-          data.frame(site_no = as.character(site), comment = "EflowStats failure",
-                     stringsAsFactors = FALSE)
-        })
-        
-        EflowDat <- EflowDat[!is.na(names(EflowDat))]
+        EflowDat <- data.frame(site_no = as.character(site),
+                               comment = "less than two peak flows", stringsAsFactors = FALSE)
         
         return(EflowDat)
         
       }
       
-      else if(length(decs) > 1) {
+      else if(nrow(pkFile) >= 2) {
         
-        # subset the DVs by the first decade
-        subDvs <- filter(newDvs, decade == decs[1])
+        newDvs <- newDvs %>%
+          mutate(yr = as.numeric(format(Date, "%Y")),
+                 mn = as.numeric(format(Date, "%m"))) %>%
+          mutate(waterYr = yr + if_else(mn < 10, 0, 1)) %>%
+          mutate(decade = (waterYr %/% 10) * 10)
         
-        # format data for EflowStats
-        flowForstats <- data.frame(datetime = subDvs$Date, discharge = subDvs$Flow)
+        decs <- unique(newDvs$decade)
         
-        EflowDat <- tryCatch({
+        if(length(decs) == 1) {
           
-          ObservedStatsOther(daily_data = flowForstats, drain_area = siteInfo$drain_area_va, 
-                             site_id = newDvs[1,2], stats = stats)
-          
-        },
+          dailyQClean <- validate_data(newDvs[c("Date", "Flow")], yearType = "water")
         
-        error = function(cond){
-          
-          data.frame(site_no = as.character(site), comment = "EflowStats failure",
-                     stringsAsFactors = FALSE)
-        })
+          drainageArea <- siteInfo$drain_area_va
         
-        EflowDat <- EflowDat[!is.na(names(EflowDat))]
+          floodThresh <- get_peakThreshold(dailyQClean[c("date","discharge")], pkFile[c("peak_dt","peak_va")])
         
-        for(i in seq(2, length(decs), 1)) {
+          calc_allHITOut <- tryCatch({
           
-          # subset the DVs by the first decade
-          subDvs <- filter(newDvs, decade == decs[i])
+            calc_allHIT(dailyQClean, drainArea = drainageArea, floodThreshold = floodThresh)
           
-          # format data for EflowStats
-          flowForstats <- data.frame(datetime = subDvs$Date, discharge = subDvs$Flow)
+          },
+        
+          error = function(cond) {
           
-          EflowDatNext <- tryCatch({
+            message(paste("all HIT error for", site))
+          
+            data.frame(comment = "EflowStats calc_allHIT error")
+          
+          })
+        
+          magnifStatsOut <- tryCatch({
             
-            ObservedStatsOther(daily_data = flowForstats, drain_area = siteInfo$drain_area_va, 
-                               site_id = newDvs[1,2], stats = stats)
+            calc_magnifSeven(dailyQClean, yearType = "water", digits = 3)
             
           },
           
-          error = function(cond){
+          error = function(cond) {
             
-            data.frame(site_no = as.character(site), comment = "EflowStats failure",
-                       stringsAsFactors = FALSE)
+            data.frame(comment = "EflowStats error", stringsAsFactors = FALSE)
+            
           })
+        
+          info <- data.frame(site_no = site, start_date = startDtNew, end_date = endDtNew)
           
-          EflowDatNext <- EflowDatNext[!is.na(names(EflowDatNext))]
+          if(nrow(calc_allHITOut) == 1 & nrow(magnifStatsOut) == 1) {
+            
+            EflowDat <- info
+            
+            EflowDat$comment <- "EflowStats failure"
+            
+            return(EflowDat)
+            
+          }
           
-          EflowDat <- dplyr::bind_rows(EflowDat, EflowDatNext); rm(EflowDatNext)
+          else if(nrow(calc_allHITOut) == 1 & nrow(magnifStatsOut) > 1) {
+            
+            magnifStatsOutDF <- t(magnifStatsOut$statistic)
+            
+            magnifStatsOutDF <- data.frame(magnifStatsOutDF)
+            
+            names(magnifStatsOutDF) <- magnifStatsOut$indice
+            
+            calc_allHITOutDF <- calc_allHITOut
+            
+          }
+          
+          else if(nrow(calc_allHITOut) > 1 & nrow(magnifStatsOut) == 1) {
+            
+            magnifStatsOutDF <- magnifStatsOut
+            
+            calc_allHITOutDF <- t(calc_allHITOut$statistic)
+            
+            calc_allHITOutDF <- data.frame(calc_allHITOutDF)
+            
+            names(calc_allHITOutDF) <- calc_allHITOut$indice
+            
+          }
+          
+          else if(nrow(calc_allHITOut) > 1 & nrow(magnifStatsOut) > 1) {
+            
+            magnifStatsOutDF <- t(magnifStatsOut$statistic)
+            
+            magnifStatsOutDF <- data.frame(magnifStatsOutDF)
+            
+            names(magnifStatsOutDF) <- magnifStatsOut$indice
+            
+            calc_allHITOutDF <- t(calc_allHITOut$statistic)
+            
+            calc_allHITOutDF <- data.frame(calc_allHITOutDF)
+            
+            names(calc_allHITOutDF) <- calc_allHITOut$indice
+            
+            calc_allHITOutDF$comment = "none"
+            
+          }
+        
+          EflowDat <- dplyr::bind_cols(info, magnifStatsOutDF, calc_allHITOutDF)
+
+          return(EflowDat)
           
         }
         
-        return(EflowDat)
+        else if(length(decs) > 1) {
+          
+          subDvs <- filter(newDvs, decade == decs[1])
+          
+          dailyQClean <- validate_data(subDvs[c("Date", "Flow")], yearType = "water")
+          
+          drainageArea <- siteInfo$drain_area_va
+          
+          floodThresh <- get_peakThreshold(dailyQClean[c("date","discharge")], pkFile[c("peak_dt","peak_va")])
+          
+          calc_allHITOut <- tryCatch({
+            
+            calc_allHIT(dailyQClean, drainArea = drainageArea, floodThreshold = floodThresh)
+            
+          },
+          
+          error = function(cond) {
+            
+            message(paste("all HIT error for", site))
+            
+            data.frame(comment = "EflowStats calc_allHIT error")
+            
+          })
+          
+          magnifStatsOut <- tryCatch({
+            
+            calc_magnifSeven(dailyQClean, yearType = "water", digits = 3)
+            
+          },
+          
+          error = function(cond) {
+            
+            data.frame(comment = "EflowStats error", stringsAsFactors = FALSE)
+            
+          })
+          
+          info <- data.frame(site_no = site, start_date = startDtNew, end_date = endDtNew,
+                             stringsAsFactors = FALSE)
+          
+          if(nrow(calc_allHITOut) == 1 & nrow(magnifStatsOut) == 1) {
+            
+            EflowDat <- info
+            
+            EflowDat$comment <- "EflowStats failure"
+            
+            return(EflowDat)
+            
+          }
+          
+          else if(nrow(calc_allHITOut) == 1 & nrow(magnifStatsOut) > 1) {
+            
+            magnifStatsOutDF <- t(magnifStatsOut$statistic)
+            
+            magnifStatsOutDF <- data.frame(magnifStatsOutDF)
+            
+            names(magnifStatsOutDF) <- magnifStatsOut$indice
+            
+            calc_allHITOutDF <- calc_allHITOut
+            
+          }
+          
+          else if(nrow(calc_allHITOut) > 1 & nrow(magnifStatsOut) == 1) {
+            
+            magnifStatsOutDF <- magnifStatsOut
+            
+            calc_allHITOutDF <- t(calc_allHITOut$statistic)
+            
+            calc_allHITOutDF <- data.frame(calc_allHITOutDF)
+            
+            names(calc_allHITOutDF) <- calc_allHITOut$indice
+            
+          }
+          
+          else if(nrow(calc_allHITOut) > 1 & nrow(magnifStatsOut) > 1) {
+            
+            magnifStatsOutDF <- t(magnifStatsOut$statistic)
+            
+            magnifStatsOutDF <- data.frame(magnifStatsOutDF)
+            
+            names(magnifStatsOutDF) <- magnifStatsOut$indice
+            
+            calc_allHITOutDF <- t(calc_allHITOut$statistic)
+            
+            calc_allHITOutDF <- data.frame(calc_allHITOutDF)
+            
+            names(calc_allHITOutDF) <- calc_allHITOut$indice
+            
+            calc_allHITOutDF$comment = "none"
+            
+          }
+          
+          EflowDat <- dplyr::bind_cols(info, magnifStatsOutDF, calc_allHITOutDF)
+          
+          for(i in seq(2, length(decs), 1)) {
+            
+            subDvs <- filter(newDvs, decade == decs[i])
+          
+            dailyQClean <- validate_data(subDvs[c("Date", "Flow")], yearType = "water")
+            
+            drainageArea <- siteInfo$drain_area_va
+            
+            floodThresh <- get_peakThreshold(dailyQClean[c("date","discharge")], pkFile[c("peak_dt","peak_va")])
+            
+            calc_allHITOut <- tryCatch({
+              
+              calc_allHIT(dailyQClean, drainArea = drainageArea, floodThreshold = floodThresh)
+              
+            },
+            
+            error = function(cond) {
+              
+              message(paste("all HIT error for", site))
+              
+              data.frame(comment = "EflowStats calc_allHIT error")
+              
+            })
+            
+            magnifStatsOut <- tryCatch({
+            
+            calc_magnifSeven(dailyQClean, yearType = "water", digits = 3)
+            
+          },
+          
+          error = function(cond) {
+            
+            data.frame(comment = "EflowStats error", stringsAsFactors = FALSE)
+            
+          })
+          
+          info <- data.frame(site_no = site, start_date = startDtNew, end_date = endDtNew,
+                             stringsAsFactors = FALSE)
+          
+          if(nrow(calc_allHITOut) == 1 & nrow(magnifStatsOut) == 1) {
+            
+            EflowDat <- info
+            
+            EflowDat$comment <- "EflowStats failure"
+            
+            return(EflowDat)
+            
+          }
+          
+          else if(nrow(calc_allHITOut) == 1 & nrow(magnifStatsOut) > 1) {
+            
+            magnifStatsOutDF <- t(magnifStatsOut$statistic)
+            
+            magnifStatsOutDF <- data.frame(magnifStatsOutDF)
+            
+            names(magnifStatsOutDF) <- magnifStatsOut$indice
+            
+            calc_allHITOutDF <- calc_allHITOut
+            
+          }
+          
+          else if(nrow(calc_allHITOut) > 1 & nrow(magnifStatsOut) == 1) {
+            
+            magnifStatsOutDF <- magnifStatsOut
+            
+            calc_allHITOutDF <- t(calc_allHITOut$statistic)
+            
+            calc_allHITOutDF <- data.frame(calc_allHITOutDF)
+            
+            names(calc_allHITOutDF) <- calc_allHITOut$indice
+            
+          }
+          
+          else if(nrow(calc_allHITOut) > 1 & nrow(magnifStatsOut) > 1) {
+            
+            magnifStatsOutDF <- t(magnifStatsOut$statistic)
+            
+            magnifStatsOutDF <- data.frame(magnifStatsOutDF)
+            
+            names(magnifStatsOutDF) <- magnifStatsOut$indice
+            
+            calc_allHITOutDF <- t(calc_allHITOut$statistic)
+            
+            calc_allHITOutDF <- data.frame(calc_allHITOutDF)
+            
+            names(calc_allHITOutDF) <- calc_allHITOut$indice
+            
+            calc_allHITOutDF$comment = "none"
+            
+          }
+          
+            newEflowDat <- dplyr::bind_cols(info, magnifStatsOutDF, calc_allHITOutDF)
+            
+            EflowDat <- dplyr::bind_rows(EflowDat, newEflowDat)
+            
+          }
+          
+          return(EflowDat)
+          
+        }
         
       }
       
