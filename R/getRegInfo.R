@@ -71,7 +71,7 @@ getRegInfo <- function(siteIDs) {
       # add that information to the data frame
       regListNew <- data.frame(siteNo = sitesX[i], beginDtDv = as.character(datFile[1,22]), 
                                endDateDv = as.character(datFile[1,23]),
-                               lat = as.numeric(datFile[1,6]), long = as.numeric(datFile[1,7]),
+                               lat = as.numeric(datFile[1,5]), long = as.numeric(datFile[1,6]),
                                stringsAsFactors = F)
       
       # add the rows to the new data frame
@@ -87,7 +87,7 @@ getRegInfo <- function(siteIDs) {
                                endDatePk = as.character(pkFile[nrow(pkFile),3]), 
                                beginDtDv = as.character(datFile[1,22]), 
                                endDateDv = as.character(datFile[1,23]), 
-                               lat = as.numeric(datFile[1,6]), long = as.numeric(datFile[1,7]), 
+                               lat = as.numeric(datFile[1,5]), long = as.numeric(datFile[1,6]), 
                                stringsAsFactors = F)
       
       # add the rows to the new data frame
@@ -105,7 +105,7 @@ getRegInfo <- function(siteIDs) {
                                endDatePk = as.character(pkFile[nrow(pkFile),3]),
                                beginDtDv = as.character(datFile[1,22]), 
                                endDateDv = as.character(datFile[1,23]),
-                               lat = as.numeric(datFile[1,6]), long = as.numeric(datFile[1,7]),
+                               lat = as.numeric(datFile[1,5]), long = as.numeric(datFile[1,6]),
                                stringsAsFactors = F)
       
       # add the rows to the new data frame
