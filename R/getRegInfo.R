@@ -50,7 +50,7 @@ getRegInfo <- function(siteIDs) {
     pkTest <- pkFile[!is.na(pkFile$peak_va),]
     
     # get information about the availability of daily discharge data
-    datFile <- whatNWISdata(siteIDs[i], service = "dv", parameterCd = "00060", statCd = "00003")
+    datFile <- whatNWISdata(siteNumber = siteIDs[i], service = "dv", parameterCd = "00060", statCd = "00003")
     
     # get rid of rows in the peak flow file with no peaks
     pkFile <- pkFile[!is.na(pkFile$peak_va),]
