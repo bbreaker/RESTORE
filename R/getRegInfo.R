@@ -5,6 +5,7 @@
 getRegInfo <- function(siteIDs) {
   
   require(dplyr, quietly = TRUE)
+  require(lubridate, quietly = TRUE)
   
   # create a blank data frame that contains all of the information needed
   regList <- data.frame(siteNo = as.character(), beginRegDate = as.character(), 
