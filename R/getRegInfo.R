@@ -33,6 +33,11 @@ getRegInfo <- function(siteIDs) {
     pkFile$peak_dt <- dplyr::if_else(stringr::str_sub(pkFile$peak_dt, start = 9, end = 10) == "00", 
                                      paste0(stringr::str_sub(pkFile$peak_dt, 1, 8), "01"), pkFile$peak_dt)
     
+    # change any -00 months to -04 months on the historic peaks in the file
+    pkFile$peak_dt <- dplyr::if_else(stringr::str_sub(pkFile$peak_dt, start = 6, end = 7) == "00", 
+                                     paste0(stringr::str_sub(pkFile$peak_dt, 1, 5), "04", 
+                                            stringr::str_sub(pkFile$peak_dt, 8, 10)), pkFile$peak_dt)
+    
     # if there is no peak flow data, use the dummy
     if (nrow(pkFile) == 0) {
       
