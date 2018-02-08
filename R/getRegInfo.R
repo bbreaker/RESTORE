@@ -131,7 +131,7 @@ getRegInfo <- function(siteIDs) {
   # create a new column of dates to start to think about a new end date
   # to use for this site... will require to evaluate
   regList$endDateDvNew <- if_else(format(regList$endDateDv, "%d") != 
-                                    days_in_month(as.numeric(format(regList$endDateDv, "%m"))), 
+                                    lubridate::days_in_month(as.numeric(format(regList$endDateDv, "%m"))), 
                                   lastDayPrevMonth(regList$endDateDv), regList$endDateDv)
   
   # make the dates Date objects
