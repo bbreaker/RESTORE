@@ -3,7 +3,7 @@
 lastDayPrevMonth <- function(x) {
   x <- as.Date(as.character(x))
   dayx <- dplyr::if_else((lubridate::month(x) - 1) == 0, as.integer(31), 
-                         as.integer(lubridate::days_in_month(month(x) - 1)))
+                         as.integer(lubridate::days_in_month(lubridate::month(x) - 1)))
   monthx <- dplyr::if_else((lubridate::month(x) - 1) == 0, as.integer(12), 
                            as.integer(month(x) - 1))
   yearx <- dplyr::if_else(lubridate::month(x) == 1, lubridate::year(x) - 1, 
