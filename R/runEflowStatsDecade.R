@@ -430,6 +430,8 @@ runEflowStatsDecade <- function(site, startDt, endDt) {
           
             newEflowDat <- dplyr::bind_cols(info, magnifStatsOutDF, calc_allHITOutDF)
             
+            newEflowDat$startDate <- startDtNew;  newEflowDat$endDate <- endDtNew
+            
             EflowDat <- dplyr::bind_rows(EflowDat, newEflowDat)
             
           }
