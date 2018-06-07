@@ -129,6 +129,8 @@ runEflowStatsDecade <- function(site, startDt, endDt) {
       
       pkFile <- dplyr::filter(pkFile, !peak_va == 0)
       
+      pkFile <- dplyr::filter(pkFile, !is.na(peak_dt))
+      
       if(nrow(pkFile) < 2) {
         
         EflowDat <- data.frame(site_no = as.character(site),
