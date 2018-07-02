@@ -57,95 +57,123 @@ getRegInfo <- function(siteIDs) {
     pkTest <- pkFile[!is.na(pkFile$peak_va),]
     
     # get information about the availability of daily discharge data
-    datFile <- whatNWISdata(siteNumber = siteIDs[i], service = "dv", parameterCd = "00060", statCd = "00003")
+    datFile <- tryCatch({
+      
+      whatNWISdata(siteNumber = siteIDs[i], service = "dv", parameterCd = "00060", statCd = "00003") 
+      
+    },
     
-    # get rid of rows in the peak flow file with no peaks
-    pkFile <- pkFile[!is.na(pkFile$peak_va),]
+    error = function(cond) {
+      
+      data.frame(siteNo = siteIDs[i], begin_date = NA, end_date = NA, stringsAsFactors = FALSE)
+        
+    })
     
-    # keep rows in the peak flow file that contain codes indicating 
-    # regulation, channelization, or diversion
-    pkFileReg <- pkFile[grepl("5|6|C", pkFile$peak_cd),]
+    if (nrow(datFile) == 0) { 
+      
+      datFile <- data.frame(siteNo = siteIDs[i], beginDtDv = NA, endDateDv = NA, stringsAsFactors = FALSE)
+      
+      regList <- datFile
+      
+    } 
     
-    # keep rows in the peak flow file that contain codes indicating 
-    # regulation, channelization, or diversion
-    pkFileUnreg <- pkFile[!grepl("5|6|C", pkFile$peak_cd),]
-    
-    # for sites that don't have any peak flows in the peak flow file
-    if (nrow(pkTest) == 0) {
+    else if (is.na(datFile$begin_date)) {
       
-      # add that information to the data frame
-      regListNew <- data.frame(siteNo = sitesX[i], beginDtDv = as.character(datFile[1,22]), 
-                               endDateDv = as.character(datFile[1,23]),
-                               lat = as.numeric(datFile[1,5]), long = as.numeric(datFile[1,6]),
-                               stringsAsFactors = F)
+      names(datFile)[c(2, 3)] <- c("beginDtDv", "endDateDv")
       
-      # add the rows to the new data frame
-      regList <- bind_rows(regList, regListNew); rm(regListNew)
+      regList <- datFile
       
-    }
-    
-    # for sites that have all "altered" flows
-    else if (nrow(pkFileReg) == 0) {
+    } else {
       
-      # add that information to the data frame
-      regListNew <- data.frame(siteNo = sitesX[i], beginDatePk = as.character(pkFile[1,3]), 
-                               endDatePk = as.character(pkFile[nrow(pkFile),3]), 
-                               beginDtDv = as.character(datFile[1,22]), 
-                               endDateDv = as.character(datFile[1,23]), 
-                               lat = as.numeric(datFile[1,5]), long = as.numeric(datFile[1,6]), 
-                               stringsAsFactors = F)
+      # get rid of rows in the peak flow file with no peaks
+      pkFile <- pkFile[!is.na(pkFile$peak_va),]
       
-      # add the rows to the new data frame
-      regList <- bind_rows(regList, regListNew); rm(regListNew)
+      # keep rows in the peak flow file that contain codes indicating 
+      # regulation, channelization, or diversion
+      pkFileReg <- pkFile[grepl("5|6|C", pkFile$peak_cd),]
       
-    }
-    
-    # for sites that have some or no "altered" flows
-    else if (nrow(pkFileReg) > 1) {
+      # keep rows in the peak flow file that contain codes indicating 
+      # regulation, channelization, or diversion
+      pkFileUnreg <- pkFile[!grepl("5|6|C", pkFile$peak_cd),]
       
-      # add that information to the data frame
-      regListNew <- data.frame(siteNo = sitesX[i], beginRegDate = as.character(pkFileReg[1,3]), 
-                               endRegDate = as.character(pkFileReg[nrow(pkFileReg),3,]), 
-                               beginDatePk = as.character(pkFile[1,3]), 
-                               endDatePk = as.character(pkFile[nrow(pkFile),3]),
-                               beginDtDv = as.character(datFile[1,22]), 
-                               endDateDv = as.character(datFile[1,23]),
-                               lat = as.numeric(datFile[1,5]), long = as.numeric(datFile[1,6]),
-                               stringsAsFactors = F)
+      # for sites that don't have any peak flows in the peak flow file
+      if (nrow(pkTest) == 0) {
+        
+        # add that information to the data frame
+        regListNew <- data.frame(siteNo = sitesX[i], beginDtDv = as.character(datFile[1,22]), 
+                                 endDateDv = as.character(datFile[1,23]),
+                                 lat = as.numeric(datFile[1,5]), long = as.numeric(datFile[1,6]),
+                                 stringsAsFactors = F)
+        
+        # add the rows to the new data frame
+        regList <- bind_rows(regList, regListNew); rm(regListNew)
+        
+      }
       
-      # add the rows to the new data frame
-      regList <- bind_rows(regList, regListNew); rm(regListNew)
+      # for sites that have all "altered" flows
+      else if (nrow(pkFileReg) == 0) {
+        
+        # add that information to the data frame
+        regListNew <- data.frame(siteNo = sitesX[i], beginDatePk = as.character(pkFile[1,3]), 
+                                 endDatePk = as.character(pkFile[nrow(pkFile),3]), 
+                                 beginDtDv = as.character(datFile[1,22]), 
+                                 endDateDv = as.character(datFile[1,23]), 
+                                 lat = as.numeric(datFile[1,5]), long = as.numeric(datFile[1,6]), 
+                                 stringsAsFactors = F)
+        
+        # add the rows to the new data frame
+        regList <- bind_rows(regList, regListNew); rm(regListNew)
+        
+      }
+      
+      # for sites that have some or no "altered" flows
+      else if (nrow(pkFileReg) > 1) {
+        
+        # add that information to the data frame
+        regListNew <- data.frame(siteNo = sitesX[i], beginRegDate = as.character(pkFileReg[1,3]), 
+                                 endRegDate = as.character(pkFileReg[nrow(pkFileReg),3,]), 
+                                 beginDatePk = as.character(pkFile[1,3]), 
+                                 endDatePk = as.character(pkFile[nrow(pkFile),3]),
+                                 beginDtDv = as.character(datFile[1,22]), 
+                                 endDateDv = as.character(datFile[1,23]),
+                                 lat = as.numeric(datFile[1,5]), long = as.numeric(datFile[1,6]),
+                                 stringsAsFactors = F)
+        
+        # add the rows to the new data frame
+        regList <- bind_rows(regList, regListNew); rm(regListNew)
+        
+      }
+      
+      # make the dates Date objects
+      regList[,2:7] <- lapply(regList[,2:7], as.Date)
+      
+      # create a new column of dates to start to think about a new start date
+      # to use for this site... will require to evaluate
+      regList$beginDtDvNew <- if_else(format(regList$beginDtDv, "%d") == "01", regList$beginDtDv, 
+                                      firstDayNextMonth(regList$beginDtDv))
+      
+      # create a new column of dates to start to think about a new end date
+      # to use for this site... will require to evaluate
+      regList$endDateDvNew <- if_else(format(regList$endDateDv, "%d") != 
+                                        lubridate::days_in_month(as.numeric(format(regList$endDateDv, "%m"))), 
+                                      lastDayPrevMonth(regList$endDateDv), regList$endDateDv)
+      
+      # make the dates Date objects
+      regList[,10:11] <- lapply(regList[,10:11], as.Date)
+      
+      # create a new column of dates to start to think about a new start date
+      # to use for this site if the peak flow file indicates 'altered' and 'unaltered' periods
+      regList$beginDtDvNew <- if_else(is.na(regList$beginRegDate), regList$beginDtDv, 
+                                      firstDayNextMonth(regList$beginDtDv))
+      
+      # create a new column of dates to start to think about a new end date
+      # to use for this site if the peak flow file indicates 'altered' and 'unaltered' periods
+      regList$endDateDvNew <- if_else(is.na(regList$beginRegDate), regList$endDateDv, 
+                                      lastDayPrevMonth(regList$beginRegDate))
       
     }
     
   }
-  
-  # make the dates Date objects
-  regList[,2:7] <- lapply(regList[,2:7], as.Date)
-  
-  # create a new column of dates to start to think about a new start date
-  # to use for this site... will require to evaluate
-  regList$beginDtDvNew <- if_else(format(regList$beginDtDv, "%d") == "01", regList$beginDtDv, 
-                                  firstDayNextMonth(regList$beginDtDv))
-  
-  # create a new column of dates to start to think about a new end date
-  # to use for this site... will require to evaluate
-  regList$endDateDvNew <- if_else(format(regList$endDateDv, "%d") != 
-                                    lubridate::days_in_month(as.numeric(format(regList$endDateDv, "%m"))), 
-                                  lastDayPrevMonth(regList$endDateDv), regList$endDateDv)
-  
-  # make the dates Date objects
-  regList[,10:11] <- lapply(regList[,10:11], as.Date)
-  
-  # create a new column of dates to start to think about a new start date
-  # to use for this site if the peak flow file indicates 'altered' and 'unaltered' periods
-  regList$beginDtDvNew <- if_else(is.na(regList$beginRegDate), regList$beginDtDv, 
-                                  firstDayNextMonth(regList$beginDtDv))
-  
-  # create a new column of dates to start to think about a new end date
-  # to use for this site if the peak flow file indicates 'altered' and 'unaltered' periods
-  regList$endDateDvNew <- if_else(is.na(regList$beginRegDate), regList$endDateDv, 
-                                  lastDayPrevMonth(regList$beginRegDate))
   
   # return the final data frame
   return(regList)
