@@ -21,7 +21,8 @@ sevQten <- function(date, flow, yearType = NULL) {
              mn = format(date, "%m"),
              dvMove = moveAve(flow, 7)) %>%
       na.omit() %>%
-      group_by(yr) %>%
+      group_by(yr) %>% 
+      dplyr::filter(n() > 328) %>% 
       summarize(yearMin = min(dvMove)) %>%
       ungroup() %>%
       data.frame()
@@ -37,6 +38,7 @@ sevQten <- function(date, flow, yearType = NULL) {
       mutate(watYr = as.character(as.numeric(yr) + if_else(as.numeric(mn) < 10, 0, 1))) %>%
       na.omit() %>%
       group_by(watYr) %>%
+      dplyr::filter(n() > 328) %>% 
       summarize(yearMin = min(dvMove)) %>%
       ungroup() %>%
       data.frame()
@@ -52,6 +54,7 @@ sevQten <- function(date, flow, yearType = NULL) {
       mutate(climYr = as.character(as.numeric(yr) + if_else(as.numeric(mn) < 4, 0, 1))) %>%
       na.omit() %>%
       group_by(climYr) %>%
+      dplyr::filter(n() > 328) %>% 
       summarize(yearMin = min(dvMove)) %>%
       ungroup() %>%
       data.frame()
