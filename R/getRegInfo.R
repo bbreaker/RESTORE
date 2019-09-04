@@ -66,7 +66,7 @@ getRegInfo <- function(siteIDs) {
     error = function(cond) {
       
       data.frame(siteNo = siteIDs[i], begin_date = NA, end_date = NA, stringsAsFactors = FALSE)
-        
+      
     })
     
     if (nrow(datFile) == 0) { 
@@ -140,40 +140,43 @@ getRegInfo <- function(siteIDs) {
                                  stringsAsFactors = F)
         
         # add the rows to the new data frame
-        regList <- bind_rows(regList, regListNew); rm(regListNew)
+        regList <- dplyr::bind_rows(regList, regListNew); rm(regListNew)
         
       }
-      
-      # make the dates Date objects
-      regList[,2:7] <- lapply(regList[,2:7], as.Date)
-      
-      # create a new column of dates to start to think about a new start date
-      # to use for this site... will require to evaluate
-      regList$beginDtDvNew <- if_else(format(regList$beginDtDv, "%d") == "01", regList$beginDtDv, 
-                                      firstDayNextMonth(regList$beginDtDv))
-      
-      # create a new column of dates to start to think about a new end date
-      # to use for this site... will require to evaluate
-      regList$endDateDvNew <- if_else(format(regList$endDateDv, "%d") != 
-                                        lubridate::days_in_month(as.numeric(format(regList$endDateDv, "%m"))), 
-                                      lastDayPrevMonth(regList$endDateDv), regList$endDateDv)
-      
-      # make the dates Date objects
-      regList[,10:11] <- lapply(regList[,10:11], as.Date)
-      
-      # create a new column of dates to start to think about a new start date
-      # to use for this site if the peak flow file indicates 'altered' and 'unaltered' periods
-      regList$beginDtDvNew <- if_else(is.na(regList$beginRegDate), regList$beginDtDv, 
-                                      firstDayNextMonth(regList$beginDtDv))
-      
-      # create a new column of dates to start to think about a new end date
-      # to use for this site if the peak flow file indicates 'altered' and 'unaltered' periods
-      regList$endDateDvNew <- if_else(is.na(regList$beginRegDate), regList$endDateDv, 
-                                      lastDayPrevMonth(regList$beginRegDate))
       
     }
     
   }
+  
+  # make the dates Date objects
+  regList[,2:7] <- lapply(regList[,2:7], as.Date)
+  
+  # make the dates Date objects
+  regList[,10:11] <- lapply(regList[,10:11], as.Date)
+  
+  # create a new column of dates to start to think about a new start date
+  # to use for this site... will require to evaluate
+  regList$beginDtDvNew <- if_else(format(regList$beginDtDv, "%d") == "01", regList$beginDtDv, 
+                                  firstDayNextMonth(regList$beginDtDv))
+  
+  # create a new column of dates to start to think about a new end date
+  # to use for this site... will require to evaluate
+  regList$endDateDvNew <- if_else(format(regList$endDateDv, "%d") != 
+                                    lubridate::days_in_month(as.numeric(format(regList$endDateDv, "%m"))), 
+                                  lastDayPrevMonth(regList$endDateDv), regList$endDateDv)
+  
+  
+  
+  
+  # create a new column of dates to start to think about a new start date
+  # to use for this site if the peak flow file indicates 'altered' and 'unaltered' periods
+  regList$beginDtDvNew <- if_else(is.na(regList$beginRegDate), regList$beginDtDv, 
+                                  firstDayNextMonth(regList$beginDtDv))
+  
+  # create a new column of dates to start to think about a new end date
+  # to use for this site if the peak flow file indicates 'altered' and 'unaltered' periods
+  regList$endDateDvNew <- if_else(is.na(regList$beginRegDate), regList$endDateDv, 
+                                  lastDayPrevMonth(regList$beginRegDate))
   
   # return the final data frame
   return(regList)
