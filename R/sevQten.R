@@ -83,7 +83,7 @@ sevQten <- function(date, flow, yearType = NULL) {
     
     distPar <- tryCatch({
       
-      lmom2par(compLmoms, type = "pe3")
+      lmomco::lmom2par(compLmoms, type = "pe3")
       
     },
     
@@ -110,3 +110,4 @@ sevQten <- function(date, flow, yearType = NULL) {
   return(val)
   
 }
+
