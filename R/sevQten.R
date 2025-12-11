@@ -95,7 +95,7 @@ sevQten <- function(date, flow, yearType = NULL) {
     
     val <- tryCatch({
       
-      signif(10^(par2qua(f = 0.1, para = distPar)), 3)
+      signif(10^(lmomco::par2qua(f = 0.1, para = distPar)), 3)
       
     },
     
@@ -110,4 +110,5 @@ sevQten <- function(date, flow, yearType = NULL) {
   return(val)
   
 }
+
 
